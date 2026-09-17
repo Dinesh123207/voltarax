@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoltVision AI — Voltarax</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:        #0a0f0d;
+  --surface:   #111a14;
+  --surface2:  #172010;
+  --border:    #1e3020;
+  --green:     #22c55e;
+  --green-dim: #16a34a;
+  --green-glow:rgba(34,197,94,0.12);
+  --amber:     #f59e0b;
+  --red:       #ef4444;
+  --blue:      #3b82f6;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --font-mono: "JetBrains Mono","Fira Code","Courier New",monospace;
+  --font-sans: "Inter","Segoe UI",system-ui,sans-serif;
+  --radius:    8px;
+  --transition: 0.2s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;min-height:100vh;}
+
+/* ── Layout ────────────────────────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;min-height:100vh;}
+.topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
+        padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);z-index:100;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px 0;
+         display:flex;flex-direction:column;gap:2px;overflow-y:auto;}
+.main{overflow-y:auto;padding:24px;}
+
+/* ── Topbar ──────────────────────────────────────────────────────────────────*/
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:.5px;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),#166534);
+           border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.live-dot{width:8px;height:8px;background:var(--green);border-radius:50%;
+          animation:pulse 2s infinite;box-shadow:0 0 6px var(--green);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.kpi-mini{display:flex;align-items:center;gap:6px;padding:4px 10px;
+          background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+          font-family:var(--font-mono);font-size:12px;}
+.kpi-mini .val{color:var(--green);font-weight:600;}
+.user-badge{display:flex;align-items:center;gap:8px;padding:4px 12px;
+            background:var(--green-glow);border:1px solid var(--border);border-radius:20px;font-size:12px;}
+#logoutBtn{background:none;border:1px solid var(--border);color:var(--muted);
+           padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;transition:var(--transition);}
+#logoutBtn:hover{border-color:var(--red);color:var(--red);}
+
+/* ── Sidebar nav ─────────────────────────────────────────────────────────────*/
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;
+          border-radius:0;transition:var(--transition);color:var(--muted);font-size:13px;
+          border-left:3px solid transparent;}
+.nav-item:hover{background:var(--green-glow);color:var(--text);}
+.nav-item.active{background:var(--green-glow);color:var(--green);border-left-color:var(--green);}
+.nav-icon{font-size:15px;width:20px;text-align:center;}
+.nav-section{padding:12px 20px 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+/* ── Cards ───────────────────────────────────────────────────────────────────*/
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.card-sm{padding:14px 16px;}
+.card-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+
+/* ── KPI cards ───────────────────────────────────────────────────────────────*/
+.kpi-val{font-family:var(--font-mono);font-size:28px;font-weight:700;line-height:1.1;}
+.kpi-unit{font-size:12px;color:var(--muted);margin-left:2px;}
+.kpi-label{font-size:11px;color:var(--muted);margin-top:4px;}
+.kpi-delta{font-size:11px;margin-top:6px;}
+.green{color:var(--green);}
+.amber{color:var(--amber);}
+.red{color:var(--red);}
+.blue{color:var(--blue);}
+
+/* ── Panel grid ──────────────────────────────────────────────────────────────*/
+.panel-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:16px;}
+.panel-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;
+            font-size:9px;font-family:var(--font-mono);font-weight:600;cursor:pointer;
+            transition:var(--transition);border:1px solid transparent;position:relative;}
+.panel-cell:hover{transform:scale(1.1);z-index:10;border-color:var(--green);}
+.panel-cell.optimal{background:#14532d;color:#86efac;}
+.panel-cell.warning{background:#451a03;color:#fbbf24;}
+.panel-cell.critical{background:#450a0a;color:#fca5a5;animation:blink 2s infinite;}
+.panel-cell.offline{background:#1e293b;color:#475569;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.row-label{display:flex;align-items:center;justify-content:center;font-size:10px;
+           color:var(--muted);padding:2px 0;font-family:var(--font-mono);}
+
+/* ── Table ───────────────────────────────────────────────────────────────────*/
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;
+   padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;}
+tr:hover td{background:var(--green-glow);}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;
+       font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.badge-green{background:#14532d;color:#86efac;}
+.badge-amber{background:#451a03;color:#fbbf24;}
+.badge-red{background:#450a0a;color:#fca5a5;}
+.badge-blue{background:#1e3a5f;color:#93c5fd;}
+.badge-gray{background:#1e293b;color:#94a3b8;}
+
+/* ── Sections ────────────────────────────────────────────────────────────────*/
+.page{display:none;} .page.active{display:block;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-title{font-size:18px;font-weight:600;}
+.btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;
+     font-weight:600;transition:var(--transition);}
+.btn-green{background:var(--green);color:#000;}
+.btn-green:hover{background:var(--green-dim);}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--green);color:var(--green);}
+.btn-sm{padding:4px 10px;font-size:11px;}
+
+/* ── Login overlay ───────────────────────────────────────────────────────────*/
+#loginOverlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
+              justify-content:center;z-index:9999;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+            padding:40px;width:360px;}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.form-group{margin-bottom:16px;}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+      padding:10px 12px;border-radius:6px;font-size:13px;outline:none;transition:var(--transition);}
+input:focus{border-color:var(--green);}
+.login-err{color:var(--red);font-size:12px;margin-top:8px;display:none;}
+#loginBtn{width:100%;margin-top:8px;padding:11px;}
+
+/* ── Misc ────────────────────────────────────────────────────────────────────*/
+.chart-wrap{position:relative;height:200px;}
+.chart-wrap-lg{position:relative;height:260px;}
+.progress-bar{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-top:4px;}
+.progress-fill{height:100%;border-radius:4px;background:var(--green);transition:.5s ease;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);
+         border-top-color:var(--green);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.flex{display:flex;align-items:center;gap:8px;}
+.gap-12{gap:12px;}
+.mt-4{margin-top:16px;}
+.shap-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.shap-label{font-size:11px;color:var(--muted);width:140px;flex-shrink:0;}
+.shap-fill{height:10px;background:var(--green);border-radius:3px;min-width:2px;}
+.shap-val{font-size:10px;color:var(--muted);font-family:var(--font-mono);}
+</style>
+</head>
+<body>
+
+<!-- ── Login Overlay ────────────────────────────────────────────────────────── -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div style="font-size:18px;font-weight:700;">VoltVision AI</div>
+        <div style="font-size:11px;color:var(--muted);">Voltarax Private Limited</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="admin@voltarax.in" value="admin@voltarax.in">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" value="Admin@123">
+    </div>
+    <div class="login-err" id="loginErr">Invalid email or password.</div>
+    <button class="btn btn-green btn-sm" id="loginBtn" onclick="doLogin()" style="width:100%;margin-top:8px;padding:11px;font-size:13px;">
+      Sign In
+    </button>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);text-align:center;">
+      Demo: admin@voltarax.in / Admin@123
+    </div>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────────────────────────── -->
+<div class="layout" id="appShell" style="display:none;">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      VoltVision AI
+      <div class="live-dot"></div>
+      <span style="font-size:11px;color:var(--muted);font-weight:400;">LIVE</span>
+    </div>
+    <div class="topbar-right">
+      <div class="kpi-mini">⚡ <span class="val" id="hdrPower">—</span> kW</div>
+      <div class="kpi-mini">🔋 <span class="val" id="hdrSoc">—</span>%</div>
+      <div class="kpi-mini">🌿 <span class="val" id="hdrCo2">—</span> kg CO₂</div>
+      <div class="user-badge">
+        <span id="userRoleBadge" style="color:var(--green);">●</span>
+        <span id="userNameDisplay">—</span>
+      </div>
+      <button id="logoutBtn" onclick="doLogout()">Sign out</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">Monitoring</div>
+    <div class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span>Overview</div>
+    <div class="nav-item" onclick="showPage('panels')"><span class="nav-icon">☀️</span>Panels</div>
+    <div class="nav-item" onclick="showPage('forecast')"><span class="nav-icon">📈</span>Forecast</div>
+    <div class="nav-section">AI Systems</div>
+    <div class="nav-item" onclick="showPage('bfci')"><span class="nav-icon">🧬</span>BFCI Coating</div>
+    <div class="nav-item" onclick="showPage('cv')"><span class="nav-icon">👁️</span>Computer Vision</div>
+    <div class="nav-section">Operations</div>
+    <div class="nav-item" onclick="showPage('alerts')"><span class="nav-icon">🔔</span>Alerts <span id="alertBadge" style="background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:auto;display:none;">0</span></div>
+    <div class="nav-item" onclick="showPage('relay')"><span class="nav-icon">⚙️</span>Energy Relay</div>
+    <div class="nav-item" onclick="showPage('carbon')"><span class="nav-icon">🌍</span>Carbon Impact</div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="showPage('workorders')"><span class="nav-icon">🔧</span>Work Orders</div>
+    <div class="nav-item" id="navUsers" onclick="showPage('users')" style="display:none;"><span class="nav-icon">👥</span>Users</div>
+    <div class="nav-item" onclick="showPage('system')"><span class="nav-icon">🖥️</span>System Health</div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ── OVERVIEW ──────────────────────────────────────────────────────── -->
+    <div class="page active" id="page-overview">
+      <div class="section-header">
+        <div class="section-title">System Overview</div>
+        <div class="flex" style="gap:8px;">
+          <div style="font-size:11px;color:var(--muted);" id="lastUpdated">Connecting…</div>
+        </div>
+      </div>
+
+      <!-- KPI row 1 -->
+      <div class="grid-4">
+        <div class="card card-sm">
+          <div class="card-title">Current Power</div>
+          <div class="kpi-val green" id="kpiPower">—<span class="kpi-unit">kW</span></div>
+          <div class="kpi-label">Fleet generation now</div>
+          <div class="progress-bar mt-4"><div class="progress-fill" id="kpiPowerBar" style="width:0%"></div></div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Daily Generation</div>
+          <div class="kpi-val green" id="kpiDaily">—<span class="kpi-unit">kWh</span></div>
+          <div class="kpi-label">Since midnight</div>
+          <div class="kpi-delta" id="kpiDailyDelta"></div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Battery SoC</div>
+          <div class="kpi-val" id="kpiSoc">—<span class="kpi-unit">%</span></div>
+          <div class="kpi-label">State of charge</div>
+          <div class="progress-bar mt-4"><div class="progress-fill" id="kpiSocBar" style="width:0%;background:var(--amber)"></div></div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">System Efficiency</div>
+          <div class="kpi-val green" id="kpiEff">—<span class="kpi-unit">%</span></div>
+          <div class="kpi-label">Overall conversion</div>
+        </div>
+      </div>
+
+      <!-- KPI row 2 -->
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="card card-sm">
+          <div class="card-title">BFCI Score (Avg)</div>
+          <div class="kpi-val green" id="kpiBfci">—<span class="kpi-unit">%</span></div>
+          <div class="kpi-label">Bio-coating health</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">Panel Temp (Avg)</div>
+          <div class="kpi-val amber" id="kpiTemp">—<span class="kpi-unit">°C</span></div>
+          <div class="kpi-label">Surface temperature</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">CO₂ Offset Today</div>
+          <div class="kpi-val green" id="kpiCo2">—<span class="kpi-unit">kg</span></div>
+          <div class="kpi-label">vs. grid @ 0.82 kg/kWh</div>
+        </div>
+        <div class="card card-sm">
+          <div class="card-title">UV Irradiance</div>
+          <div class="kpi-val blue" id="kpiUv">—<span class="kpi-unit">W/m²</span></div>
+          <div class="kpi-label">Solar intensity</div>
+        </div>
+      </div>
+
+      <!-- Panel status + charts -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Panel Status — Fleet View</div>
+          <div id="panelGridContainer">Loading…</div>
+          <div class="flex mt-4" style="gap:16px;">
+            <span style="font-size:11px;"><span style="color:#86efac;">█</span> Optimal (<span id="stOptimal">—</span>)</span>
+            <span style="font-size:11px;"><span style="color:var(--amber);">█</span> Warning (<span id="stWarning">—</span>)</span>
+            <span style="font-size:11px;"><span style="color:var(--red);">█</span> Critical (<span id="stCritical">—</span>)</span>
+            <span style="font-size:11px;"><span style="color:#475569;">█</span> Offline (<span id="stOffline">—</span>)</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Power Generation — Today</div>
+          <div class="chart-wrap"><canvas id="chartHourly"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:14px;">
+        <div class="card">
+          <div class="card-title">Relay State</div>
+          <div id="relayStateCard" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">1h Forecast</div>
+          <div class="kpi-val green" id="ovForecast">—<span class="kpi-unit">kW</span></div>
+          <div class="kpi-label" id="ovForecastRec" style="margin-top:8px;line-height:1.5;color:var(--muted);font-size:11px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Active Alerts</div>
+          <div class="kpi-val red" id="ovAlerts">—</div>
+          <div class="kpi-label">Unresolved issues</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="showPage('alerts')">View Alerts →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PANELS ─────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-panels">
+      <div class="section-header">
+        <div class="section-title">Panel Management</div>
+        <div class="flex gap-12">
+          <select id="panelRowFilter" onchange="filterPanels()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+            <option value="">All Rows</option>
+            <option value="A">Row A</option><option value="B">Row B</option>
+            <option value="C">Row C</option><option value="D">Row D</option>
+          </select>
+          <select id="panelStatusFilter" onchange="filterPanels()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+            <option value="">All Status</option>
+            <option value="optimal">Optimal</option><option value="warning">Warning</option>
+            <option value="critical">Critical</option><option value="offline">Offline</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="loadPanels()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <table>
+          <thead><tr>
+            <th>Panel</th><th>Status</th><th>Efficiency</th><th>Power (W)</th>
+            <th>Voltage (V)</th><th>Temp (°C)</th><th>BFCI</th><th>CV Class</th>
+          </tr></thead>
+          <tbody id="panelsTable"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px;"><div class="spinner"></div> Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── FORECAST ───────────────────────────────────────────────────────── -->
+    <div class="page" id="page-forecast">
+      <div class="section-header"><div class="section-title">AI Energy Forecast</div></div>
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="card card-sm"><div class="card-title">Next 1 Hour</div><div class="kpi-val green" id="fc1h">—<span class="kpi-unit">kW</span></div><div class="kpi-label">Confidence: <span id="fc1hConf">—</span>%</div></div>
+        <div class="card card-sm"><div class="card-title">Next 6 Hours</div><div class="kpi-val green" id="fc6h">—<span class="kpi-unit">kWh</span></div><div class="kpi-label">Confidence: <span id="fc6hConf">—</span>%</div></div>
+        <div class="card card-sm"><div class="card-title">Today Total</div><div class="kpi-val green" id="fc24h">—<span class="kpi-unit">kWh</span></div><div class="kpi-label">Confidence: <span id="fc24hConf">—</span>%</div></div>
+        <div class="card card-sm"><div class="card-title">This Week</div><div class="kpi-val green" id="fc7d">—<span class="kpi-unit">kWh</span></div><div class="kpi-label">Confidence: <span id="fc7dConf">—</span>%</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Hourly Profile — Today</div><div class="chart-wrap-lg"><canvas id="chartFcHourly"></canvas></div></div>
+        <div class="card"><div class="card-title">7-Day Forecast Accuracy</div><div class="chart-wrap-lg"><canvas id="chartFcHistory"></canvas></div></div>
+      </div>
+      <div class="card mt-4">
+        <div class="card-title">AI Recommendation</div>
+        <div id="fcRecommendation" style="color:var(--text);line-height:1.6;font-size:13px;margin-top:4px;"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);">Model: <span id="fcModel">—</span> · Generated: <span id="fcGenAt">—</span></div>
+      </div>
+    </div>
+
+    <!-- ── BFCI ───────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-bfci">
+      <div class="section-header"><div class="section-title">BFCI — Bio-Fluorescent Coating Intelligence</div></div>
+      <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,#0a1f0d,#111a14);border-color:#1e4020;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:28px;">🧬</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;">Patent Claim 1 — Indian Patent 487411-001</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">World's first AI system combining AS7265x 18-channel spectral sensing, Bayesian-Optimised Bagging regression, and SHAP explainability for bio-coating degradation prediction in photovoltaic systems.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="overflow:auto;margin-bottom:14px;">
+        <table>
+          <thead><tr><th>Panel</th><th>BFCI Score</th><th>Status</th><th>UV Absorption</th><th>Days to Recoat</th><th>Coat Batch</th><th>Recorded</th></tr></thead>
+          <tbody id="bfciTable"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">SHAP Feature Importance — Panel A1 (sample)</div>
+        <div id="shapContainer" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ── CV ─────────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-cv">
+      <div class="section-header">
+        <div class="section-title">Computer Vision — Panel Inspection</div>
+        <button class="btn btn-green btn-sm" id="scanBtn" onclick="triggerCVScan()">▶ Trigger Full Scan</button>
+      </div>
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="card card-sm"><div class="card-title">Clean</div><div class="kpi-val green" id="cvClean">—</div></div>
+        <div class="card card-sm"><div class="card-title">Dusty</div><div class="kpi-val amber" id="cvDusty">—</div></div>
+        <div class="card card-sm"><div class="card-title">Cracked</div><div class="kpi-val red" id="cvCracked">—</div></div>
+        <div class="card card-sm"><div class="card-title">Bio-Degraded</div><div class="kpi-val amber" id="cvBio">—</div></div>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <table>
+          <thead><tr><th>Panel</th><th>Classification</th><th>Confidence</th><th>Eff. Loss</th><th>Model</th><th>Scanned At</th></tr></thead>
+          <tbody id="cvTable"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ALERTS ─────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-alerts">
+      <div class="section-header">
+        <div class="section-title">Alerts</div>
+        <div class="flex gap-12">
+          <select id="alertSevFilter" onchange="loadAlerts()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+            <option value="">All Severity</option>
+            <option value="critical">Critical</option><option value="warning">Warning</option><option value="info">Info</option>
+          </select>
+          <select id="alertResolvedFilter" onchange="loadAlerts()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+            <option value="false">Unresolved</option><option value="true">Resolved</option><option value="">All</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="loadAlerts()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <table>
+          <thead><tr><th>Severity</th><th>Panel</th><th>Type</th><th>Message</th><th>Confidence</th><th>Time</th><th>Action</th></tr></thead>
+          <tbody id="alertsTable"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── RELAY ──────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-relay">
+      <div class="section-header"><div class="section-title">Energy Management Relay</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Current Relay State</div>
+          <div id="relayDetail" style="display:flex;flex-direction:column;gap:14px;margin-top:8px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Manual Override</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;" id="relayControls">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <input type="checkbox" id="rBattery" style="width:16px;height:16px;accent-color:var(--green)">
+              <span>Battery Charging</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <input type="checkbox" id="rLoad" checked style="width:16px;height:16px;accent-color:var(--green)">
+              <span>Load Supply</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <input type="checkbox" id="rGrid" style="width:16px;height:16px;accent-color:var(--green)">
+              <span>Grid Export</span>
+            </label>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Reason</label>
+              <input type="text" id="rReason" value="manual_override" style="font-size:12px;padding:7px 10px;">
+            </div>
+            <button class="btn btn-green" id="relaySetBtn" onclick="setRelay()" style="margin-top:4px;">Apply Relay State</button>
+          </div>
+        </div>
+      </div>
+      <div class="card mt-4" style="overflow:auto;">
+        <div class="card-title">Relay Command History</div>
+        <table>
+          <thead><tr><th>Battery</th><th>Load</th><th>Grid Export</th><th>Reason</th><th>Commanded By</th><th>SoC %</th><th>Time</th></tr></thead>
+          <tbody id="relayHistory"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CARBON ─────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-carbon">
+      <div class="section-header"><div class="section-title">Carbon Impact Analytics</div></div>
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="card card-sm"><div class="card-title">Today CO₂ Saved</div><div class="kpi-val green" id="cToday">—<span class="kpi-unit">kg</span></div></div>
+        <div class="card card-sm"><div class="card-title">This Month</div><div class="kpi-val green" id="cMonth">—<span class="kpi-unit">kg</span></div></div>
+        <div class="card card-sm"><div class="card-title">This Year</div><div class="kpi-val green" id="cYear">—<span class="kpi-unit">kg</span></div></div>
+        <div class="card card-sm"><div class="card-title">Trees Equivalent</div><div class="kpi-val green" id="cTrees">—</div><div class="kpi-label">🌳 trees / year</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Monthly CO₂ Offset</div><div class="chart-wrap-lg"><canvas id="chartCarbon"></canvas></div></div>
+        <div class="card">
+          <div class="card-title">Impact Summary</div>
+          <div id="carbonSummary" style="display:flex;flex-direction:column;gap:12px;margin-top:8px;"></div>
+          <button class="btn btn-green btn-sm" style="margin-top:16px;" onclick="genESGReport()">Generate ESG Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── WORK ORDERS ────────────────────────────────────────────────────── -->
+    <div class="page" id="page-workorders">
+      <div class="section-header">
+        <div class="section-title">Work Orders</div>
+        <div class="flex gap-12">
+          <select id="woStatusFilter" onchange="loadWO()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+            <option value="">All Status</option>
+            <option value="open">Open</option><option value="in_progress">In Progress</option><option value="closed">Closed</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="loadWO()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <table>
+          <thead><tr><th>ID</th><th>Panel</th><th>Title</th><th>Priority</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+          <tbody id="woTable"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── USERS ──────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-users">
+      <div class="section-header">
+        <div class="section-title">User Management</div>
+        <button class="btn btn-green btn-sm" onclick="loadUsers()">↻ Refresh</button>
+      </div>
+      <div class="card" style="overflow:auto;">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th></tr></thead>
+          <tbody id="usersTable"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SYSTEM ─────────────────────────────────────────────────────────── -->
+    <div class="page" id="page-system">
+      <div class="section-header"><div class="section-title">System Health</div><button class="btn btn-outline btn-sm" onclick="loadSystem()">↻ Refresh</button></div>
+      <div class="grid-4" style="margin-bottom:16px;">
+        <div class="card card-sm"><div class="card-title">SQLite</div><div id="sySqlite" class="kpi-val green">—</div></div>
+        <div class="card card-sm"><div class="card-title">InfluxDB</div><div id="syInflux" class="kpi-val red">—</div></div>
+        <div class="card card-sm"><div class="card-title">MQTT</div><div id="syMqtt" class="kpi-val green">—</div></div>
+        <div class="card card-sm"><div class="card-title">AI Engine</div><div id="syAi" class="kpi-val green">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Services</div>
+        <div id="servicesGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px;"></div>
+      </div>
+      <div class="card mt-4">
+        <div class="card-title">Runtime Info</div>
+        <div id="sysInfo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API  = '';  // same origin — empty = relative URLs
+let   TOKEN     = localStorage.getItem('vv_token') || '';
+let   USER_ROLE = localStorage.getItem('vv_role')  || '';
+let   USER_NAME = localStorage.getItem('vv_name')  || '';
+let   charts    = {};
+let   ws        = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const h  = () => ({ 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' });
+
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { headers: h(), ...opts });
+  if (r.status === 401) { doLogout(); return null; }
+  return r.ok ? r.json() : null;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata',
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function severityBadge(s) {
+  const map = { critical: 'badge-red', warning: 'badge-amber', info: 'badge-blue' };
+  return `<span class="badge ${map[s] || 'badge-gray'}">${s}</span>`;
+}
+
+function statusBadge(s) {
+  const map = { optimal: 'badge-green', warning: 'badge-amber', critical: 'badge-red',
+                offline: 'badge-gray', open: 'badge-amber', in_progress: 'badge-blue',
+                closed: 'badge-green', good: 'badge-green' };
+  return `<span class="badge ${map[s] || 'badge-gray'}">${s.replace('_', ' ')}</span>`;
+}
+
+function cvBadge(c) {
+  const map = { clean: 'badge-green', dusty: 'badge-amber', cracked: 'badge-red',
+                bio_degraded: 'badge-amber', pending: 'badge-gray' };
+  return `<span class="badge ${map[c] || 'badge-gray'}">${c.replace('_', '-')}</span>`;
+}
+
+function relay(on) {
+  return on
+    ? '<span style="color:var(--green);font-size:10px;font-weight:700;">● ON</span>'
+    : '<span style="color:var(--muted);font-size:10px;">○ OFF</span>';
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const btn = $('loginBtn');
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+  const err = $('loginErr');
+  err.style.display = 'none';
+
+  try {
+    const r = await fetch(`${API}/api/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value }),
+    });
+    const d = await r.json();
+    if (!r.ok) { err.style.display = 'block'; btn.innerHTML = 'Sign In'; btn.disabled = false; return; }
+    TOKEN     = d.access_token;
+    USER_ROLE = d.user.role;
+    USER_NAME = d.user.full_name || d.user.email;
+    localStorage.setItem('vv_token', TOKEN);
+    localStorage.setItem('vv_role',  USER_ROLE);
+    localStorage.setItem('vv_name',  USER_NAME);
+    bootApp();
+  } catch (e) {
+    err.style.display = 'block'; btn.innerHTML = 'Sign In'; btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('vv_token');
+  localStorage.removeItem('vv_role');
+  localStorage.removeItem('vv_name');
+  TOKEN = ''; USER_ROLE = ''; USER_NAME = '';
+  if (ws) ws.close();
+  $('appShell').style.display = 'none';
+  $('loginOverlay').style.display = 'flex';
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+function bootApp() {
+  $('loginOverlay').style.display = 'none';
+  $('appShell').style.display = 'grid';
+  $('userNameDisplay').textContent = USER_NAME;
+  $('userRoleBadge').title = USER_ROLE;
+  if (USER_ROLE === 'admin') $('navUsers').style.display = 'flex';
+  if (USER_ROLE === 'viewer') {
+    $('relayControls').style.opacity = '0.4';
+    $('relaySetBtn') && ($('relaySetBtn').disabled = true);
+    $('scanBtn') && ($('scanBtn').disabled = true);
+  }
+  initCharts();
+  loadOverview();
+  connectWS();
+  setInterval(loadOverview, 30000);
+}
+
+// ── WebSocket live feed ───────────────────────────────────────────────────────
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/live`);
+  ws.onmessage = e => {
+    const d = JSON.parse(e.data);
+    updateLiveKPIs(d);
+    $('lastUpdated').textContent = 'Live · ' + new Date().toLocaleTimeString('en-IN');
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000);
+}
+
+function updateLiveKPIs(d) {
+  $('kpiPower').innerHTML    = `${d.power_kw}<span class="kpi-unit">kW</span>`;
+  $('kpiSoc').innerHTML      = `${d.battery_soc_pct}<span class="kpi-unit">%</span>`;
+  $('kpiEff').innerHTML      = `${d.efficiency_pct}<span class="kpi-unit">%</span>`;
+  $('kpiBfci').innerHTML     = `${d.bfci_avg_pct}<span class="kpi-unit">%</span>`;
+  $('kpiTemp').innerHTML     = `${d.panel_temp_c}<span class="kpi-unit">°C</span>`;
+  $('kpiUv').innerHTML       = `${d.uv_irradiance}<span class="kpi-unit">W/m²</span>`;
+  $('hdrPower').textContent  = d.power_kw;
+  $('hdrSoc').textContent    = d.battery_soc_pct;
+  $('hdrCo2').textContent    = d.co2_offset_kg;
+
+  // progress bars
+  const pbar = $('kpiPowerBar');
+  if (pbar) pbar.style.width = Math.min(100, d.power_kw / 7 * 100) + '%';
+  const sbar = $('kpiSocBar');
+  if (sbar) { sbar.style.width = d.battery_soc_pct + '%';
+    sbar.style.background = d.battery_soc_pct > 60 ? 'var(--green)' : d.battery_soc_pct > 30 ? 'var(--amber)' : 'var(--red)'; }
+
+  const col = d.power_kw > 3 ? 'var(--green)' : d.power_kw > 1 ? 'var(--amber)' : 'var(--red)';
+  $('kpiPower').style.color = col;
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  const [dash, forecast, hourly] = await Promise.all([
+    api('/api/dashboard'), api('/api/forecast'), api('/api/forecast/hourly')
+  ]);
+  if (dash) applyDashboard(dash);
+  if (forecast) applyForecast(forecast);
+  if (hourly) updateHourlyChart(hourly.profile);
+  await loadPanelGrid();
+}
+
+function applyDashboard(d) {
+  $('kpiDaily').innerHTML   = `${d.daily_generation_kwh}<span class="kpi-unit">kWh</span>`;
+  $('kpiCo2').innerHTML     = `${d.co2_offset_today_kg}<span class="kpi-unit">kg</span>`;
+  $('ovAlerts').textContent = d.active_alerts;
+  $('stOptimal').textContent  = d.panels_optimal;
+  $('stWarning').textContent  = d.panels_warning;
+  $('stCritical').textContent = d.panels_critical;
+  $('stOffline').textContent  = d.panels_offline;
+
+  // Alert badge in nav
+  const ab = $('alertBadge');
+  if (d.active_alerts > 0) { ab.textContent = d.active_alerts; ab.style.display = 'inline'; }
+  else ab.style.display = 'none';
+
+  // Relay card
+  const r = d.relay_state;
+  $('relayStateCard').innerHTML = `
+    <div class="flex"><span style="width:120px;color:var(--muted);font-size:12px;">Battery</span>${relay(r.battery_on)}</div>
+    <div class="flex"><span style="width:120px;color:var(--muted);font-size:12px;">Load Supply</span>${relay(r.load_on)}</div>
+    <div class="flex"><span style="width:120px;color:var(--muted);font-size:12px;">Grid Export</span>${relay(r.grid_export)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;">By: ${r.commanded_by} · ${fmtDate(r.commanded_at)}</div>
+  `;
+}
+
+function applyForecast(f) {
+  $('ovForecast').innerHTML = `${f.forecast_1h_kw}<span class="kpi-unit">kW</span>`;
+  $('ovForecastRec').textContent = f.recommendation;
+}
+
+// ── Panel Grid ────────────────────────────────────────────────────────────────
+async function loadPanelGrid() {
+  const panels = await api('/api/panels');
+  if (!panels) return;
+  const rows = ['A','B','C','D'];
+  let html = '';
+  rows.forEach(row => {
+    html += `<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+      <div class="row-label">${row}</div>
+      <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;flex:1;">`;
+    for (let c = 1; c <= 8; c++) {
+      const p = panels.find(x => x.label === `${row}${c}`);
+      if (p) {
+        const st = p.status || 'offline';
+        html += `<div class="panel-cell ${st}" title="${p.label} | ${st} | Eff: ${p.efficiency_pct?.toFixed(1)}%">${p.label}</div>`;
+      }
+    }
+    html += '</div></div>';
+  });
+  $('panelGridContainer').innerHTML = html || 'No data';
+}
+
+// ── Panels table ──────────────────────────────────────────────────────────────
+async function loadPanels() {
+  const row    = $('panelRowFilter').value;
+  const status = $('panelStatusFilter').value;
+  let url = '/api/panels';
+  const params = [];
+  if (row)    params.push(`row=${row}`);
+  if (status) params.push(`status=${status}`);
+  if (params.length) url += '?' + params.join('&');
+
+  const panels = await api(url);
+  if (!panels) return;
+  $('panelsTable').innerHTML = panels.map(p => `
+    <tr>
+      <td><b style="color:var(--green);font-family:var(--font-mono);">${p.label}</b></td>
+      <td>${statusBadge(p.status)}</td>
+      <td style="font-family:var(--font-mono);">${p.efficiency_pct?.toFixed(1) ?? '—'}%</td>
+      <td style="font-family:var(--font-mono);">${p.power_w?.toFixed(0) ?? '—'}</td>
+      <td style="font-family:var(--font-mono);">${p.voltage_v?.toFixed(1) ?? '—'}</td>
+      <td style="font-family:var(--font-mono);color:${p.temp_c>55?'var(--red)':'var(--amber)'};">${p.temp_c?.toFixed(1) ?? '—'}</td>
+      <td style="font-family:var(--font-mono);color:${p.bfci_score<70?'var(--red)':p.bfci_score<80?'var(--amber)':'var(--green)'};">${p.bfci_score?.toFixed(1) ?? '—'}%</td>
+      <td>${p.cv_class ? cvBadge(p.cv_class) : '<span style="color:var(--muted);">—</span>'}</td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px;">No panels found</td></tr>';
+}
+
+function filterPanels() { loadPanels(); }
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+async function loadForecast() {
+  const [fc, hourly, hist] = await Promise.all([
+    api('/api/forecast'), api('/api/forecast/hourly'), api('/api/forecast/history?days=7')
+  ]);
+  if (fc) {
+    $('fc1h').innerHTML   = `${fc.forecast_1h_kw}<span class="kpi-unit">kW</span>`;
+    $('fc6h').innerHTML   = `${fc.forecast_6h_kwh}<span class="kpi-unit">kWh</span>`;
+    $('fc24h').innerHTML  = `${fc.forecast_24h_kwh}<span class="kpi-unit">kWh</span>`;
+    $('fc7d').innerHTML   = `${fc.forecast_7d_kwh}<span class="kpi-unit">kWh</span>`;
+    $('fc1hConf').textContent  = Math.round(fc.confidence[0] * 100);
+    $('fc6hConf').textContent  = Math.round(fc.confidence[1] * 100);
+    $('fc24hConf').textContent = Math.round(fc.confidence[2] * 100);
+    $('fc7dConf').textContent  = Math.round(fc.confidence[3] * 100);
+    $('fcRecommendation').textContent = fc.recommendation;
+    $('fcModel').textContent   = fc.model_version;
+    $('fcGenAt').textContent   = fmtDate(fc.generated_at);
+  }
+  if (hourly) updateFcHourlyChart(hourly.profile);
+  if (hist)   updateFcHistoryChart(hist.history);
+}
+
+// ── BFCI ──────────────────────────────────────────────────────────────────────
+async function loadBFCI() {
+  const fleet = await api('/api/bfci');
+  if (fleet) {
+    $('bfciTable').innerHTML = fleet.map(b => `
+      <tr>
+        <td><b style="color:var(--green);font-family:var(--font-mono);">${b.panel_label}</b></td>
+        <td style="font-family:var(--font-mono);font-size:15px;color:${b.bfci_score<70?'var(--red)':b.bfci_score<80?'var(--amber)':'var(--green)'};">${b.bfci_score.toFixed(1)}%</td>
+        <td>${statusBadge(b.status)}</td>
+        <td style="font-family:var(--font-mono);">${b.uv_absorption_pct?.toFixed(1) ?? '—'}%</td>
+        <td style="font-family:var(--font-mono);color:${b.days_to_recoat<15?'var(--red)':b.days_to_recoat<30?'var(--amber)':'var(--green)'};">${b.days_to_recoat ?? '—'} d</td>
+        <td style="font-size:11px;color:var(--muted);">${b.batch_id || '—'}</td>
+        <td style="font-size:11px;color:var(--muted);">${fmtDate(b.recorded_at)}</td>
+      </tr>`).join('');
+  }
+  const shap = await api('/api/bfci/shap/1');
+  if (shap?.shap) {
+    const sorted = Object.entries(shap.shap).sort((a,b) => b[1]-a[1]);
+    const max    = sorted[0][1];
+    $('shapContainer').innerHTML = sorted.map(([k,v]) => `
+      <div class="shap-bar">
+        <div class="shap-label">${k.replace(/_/g,' ')}</div>
+        <div class="shap-fill" style="width:${Math.round(v/max*180)}px"></div>
+        <div class="shap-val">${(v*100).toFixed(1)}%</div>
+      </div>`).join('');
+  }
+}
+
+// ── CV ────────────────────────────────────────────────────────────────────────
+async function loadCV() {
+  const [detections, summary] = await Promise.all([api('/api/cv'), api('/api/cv/summary')]);
+  if (summary) {
+    $('cvClean').textContent   = summary.counts.clean || 0;
+    $('cvDusty').textContent   = summary.counts.dusty || 0;
+    $('cvCracked').textContent = summary.counts.cracked || 0;
+    $('cvBio').textContent     = summary.counts.bio_degraded || 0;
+  }
+  if (detections) {
+    $('cvTable').innerHTML = detections.map(d => `
+      <tr>
+        <td><b style="color:var(--green);font-family:var(--font-mono);">${d.panel_label}</b></td>
+        <td>${cvBadge(d.cv_class)}</td>
+        <td style="font-family:var(--font-mono);">${(d.confidence*100).toFixed(1)}%</td>
+        <td style="font-family:var(--font-mono);color:${d.eff_loss_pct>5?'var(--red)':d.eff_loss_pct>0?'var(--amber)':'var(--green)'};">${d.eff_loss_pct.toFixed(1)}%</td>
+        <td style="font-size:11px;color:var(--muted);">${d.model_ver}</td>
+        <td style="font-size:11px;color:var(--muted);">${fmtDate(d.scanned_at)}</td>
+      </tr>`).join('');
+  }
+}
+
+async function triggerCVScan() {
+  if (USER_ROLE === 'viewer') return;
+  const btn = $('scanBtn');
+  btn.textContent = 'Scanning…'; btn.disabled = true;
+  await api('/api/cv/scan', { method: 'POST', body: JSON.stringify({panel_ids: null}) });
+  setTimeout(() => { btn.textContent = '▶ Trigger Full Scan'; btn.disabled = false; loadCV(); }, 3000);
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const sev      = $('alertSevFilter').value;
+  const resolved = $('alertResolvedFilter').value;
+  let url = '/api/alerts?limit=100';
+  if (sev)                url += `&severity=${sev}`;
+  if (resolved !== '')    url += `&resolved=${resolved}`;
+
+  const alerts = await api(url);
+  if (!alerts) return;
+  $('alertsTable').innerHTML = alerts.map(a => `
+    <tr>
+      <td>${severityBadge(a.severity)}</td>
+      <td style="font-family:var(--font-mono);">${a.panel_label || '—'}</td>
+      <td style="font-size:11px;color:var(--muted);">${a.alert_type.replace(/_/g,' ')}</td>
+      <td style="max-width:280px;font-size:12px;">${a.message}</td>
+      <td style="font-family:var(--font-mono);">${a.confidence ? (a.confidence*100).toFixed(0)+'%' : '—'}</td>
+      <td style="font-size:11px;color:var(--muted);">${fmtDate(a.created_at)}</td>
+      <td>${!a.resolved && USER_ROLE !== 'viewer'
+            ? `<button class="btn btn-outline btn-sm" onclick="resolveAlert(${a.id})">Resolve</button>`
+            : a.resolved ? '<span style="color:var(--green);font-size:11px;">✓ Resolved</span>' : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No alerts</td></tr>';
+}
+
+async function resolveAlert(id) {
+  await api(`/api/alerts/${id}/resolve`, { method: 'PUT', body: JSON.stringify({resolved:true}) });
+  loadAlerts();
+}
+
+// ── Relay ─────────────────────────────────────────────────────────────────────
+async function loadRelay() {
+  const [state, history] = await Promise.all([api('/api/relay'), api('/api/relay/history?limit=15')]);
+  if (state) {
+    $('relayDetail').innerHTML = `
+      <div class="flex"><span style="width:140px;color:var(--muted);">Battery Charging</span>${relay(state.battery_on)}</div>
+      <div class="flex"><span style="width:140px;color:var(--muted);">Load Supply</span>${relay(state.load_on)}</div>
+      <div class="flex"><span style="width:140px;color:var(--muted);">Grid Export</span>${relay(state.grid_export)}</div>
+      <div class="flex"><span style="width:140px;color:var(--muted);">Spare Channel</span>${relay(state.spare_on)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Reason: ${state.reason} · SoC: ${state.soc_pct ?? '—'}%</div>
+      <div style="font-size:11px;color:var(--muted);">By: ${state.commanded_by} · ${fmtDate(state.commanded_at)}</div>
+    `;
+    $('rBattery').checked = state.battery_on;
+    $('rLoad').checked    = state.load_on;
+    $('rGrid').checked    = state.grid_export;
+  }
+  if (history) {
+    $('relayHistory').innerHTML = history.map(r => `
+      <tr>
+        <td>${relay(r.battery_on)}</td><td>${relay(r.load_on)}</td><td>${relay(r.grid_export)}</td>
+        <td style="font-size:11px;color:var(--muted);">${r.reason}</td>
+        <td style="font-size:11px;color:var(--muted);">${r.commanded_by}</td>
+        <td style="font-family:var(--font-mono);">${r.soc_pct ?? '—'}%</td>
+        <td style="font-size:11px;color:var(--muted);">${fmtDate(r.commanded_at)}</td>
+      </tr>`).join('');
+  }
+}
+
+async function setRelay() {
+  if (USER_ROLE === 'viewer') return;
+  const btn = $('relaySetBtn');
+  btn.textContent = 'Applying…'; btn.disabled = true;
+  await api('/api/relay', { method: 'POST', body: JSON.stringify({
+    battery_on: $('rBattery').checked, load_on: $('rLoad').checked,
+    grid_export: $('rGrid').checked, spare_on: false,
+    reason: $('rReason').value || 'manual_override',
+  })});
+  btn.textContent = 'Apply Relay State'; btn.disabled = false;
+  loadRelay();
+}
+
+// ── Carbon ────────────────────────────────────────────────────────────────────
+async function loadCarbon() {
+  const [carbon, monthly] = await Promise.all([api('/api/carbon'), api('/api/carbon/monthly?months=12')]);
+  if (carbon) {
+    $('cToday').innerHTML = `${carbon.today_co2_kg}<span class="kpi-unit">kg</span>`;
+    $('cMonth').innerHTML = `${carbon.month_co2_kg}<span class="kpi-unit">kg</span>`;
+    $('cYear').innerHTML  = `${carbon.year_co2_kg}<span class="kpi-unit">kg</span>`;
+    $('cTrees').textContent = carbon.trees_equivalent;
+    $('carbonSummary').innerHTML = `
+      <div class="flex"><span style="color:var(--muted);width:160px;font-size:12px;">Today kWh</span><span style="font-family:var(--font-mono);">${carbon.today_kwh}</span></div>
+      <div class="flex"><span style="color:var(--muted);width:160px;font-size:12px;">Grid saved (₹/year)</span><span style="font-family:var(--font-mono);color:var(--green);">₹${carbon.grid_saved_inr.toLocaleString()}</span></div>
+      <div class="flex"><span style="color:var(--muted);width:160px;font-size:12px;">Emission factor</span><span style="font-family:var(--font-mono);">${carbon.emission_factor} kg/kWh</span></div>
+    `;
+  }
+  if (monthly) updateCarbonChart(monthly.months);
+}
+
+async function genESGReport() {
+  const r = await api('/api/carbon/report', { method: 'POST' });
+  if (r) alert(`ESG Report queued! ID: ${r.data?.report_id}\nReady in ~${r.data?.eta_seconds}s`);
+}
+
+// ── Work Orders ───────────────────────────────────────────────────────────────
+async function loadWO() {
+  const st  = $('woStatusFilter').value;
+  const url = st ? `/api/work-orders?status=${st}` : '/api/work-orders';
+  const wo  = await api(url);
+  if (!wo) return;
+  const priCol = { low: 'var(--muted)', medium: 'var(--amber)', high: 'var(--amber)', critical: 'var(--red)' };
+  $('woTable').innerHTML = wo.map(w => `
+    <tr>
+      <td style="font-family:var(--font-mono);color:var(--muted);">#${w.id}</td>
+      <td style="font-family:var(--font-mono);">${w.panel_label || '—'}</td>
+      <td style="font-size:12px;">${w.title}</td>
+      <td><span style="color:${priCol[w.priority]};font-size:11px;font-weight:700;text-transform:uppercase;">${w.priority}</span></td>
+      <td>${statusBadge(w.status)}</td>
+      <td style="font-size:11px;color:var(--muted);">${fmtDate(w.created_at)}</td>
+      <td>${w.status !== 'closed' && USER_ROLE !== 'viewer'
+            ? `<button class="btn btn-outline btn-sm" onclick="closeWO(${w.id})">Close</button>`
+            : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No work orders</td></tr>';
+}
+
+async function closeWO(id) {
+  await api(`/api/work-orders/${id}`, { method: 'PUT', body: JSON.stringify({status:'closed'}) });
+  loadWO();
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  const u = await api('/api/users');
+  if (!u) return;
+  const roleCol = { admin: 'badge-red', operator: 'badge-blue', viewer: 'badge-gray' };
+  $('usersTable').innerHTML = u.data.map(usr => `
+    <tr>
+      <td style="font-family:var(--font-mono);color:var(--muted);">${usr.id}</td>
+      <td>${usr.full_name}</td>
+      <td style="color:var(--muted);font-size:12px;">${usr.email}</td>
+      <td><span class="badge ${roleCol[usr.role]}">${usr.role}</span></td>
+      <td>${usr.is_active ? '<span style="color:var(--green);font-size:11px;">● Active</span>' : '<span style="color:var(--muted);">○ Inactive</span>'}</td>
+      <td style="font-size:11px;color:var(--muted);">${fmtDate(usr.last_login)}</td>
+    </tr>`).join('');
+}
+
+// ── System ────────────────────────────────────────────────────────────────────
+async function loadSystem() {
+  const s = await api('/api/system');
+  if (!s) return;
+  const ok  = v => v ? '<span style="color:var(--green);">● Online</span>' : '<span style="color:var(--red);">● Offline</span>';
+  $('sySqlite').innerHTML = ok(s.sqlite_ok);
+  $('syInflux').innerHTML = ok(s.influxdb_ok);
+  $('syMqtt').innerHTML   = ok(s.mqtt_ok);
+  $('syAi').innerHTML     = ok(s.ai_engine_ok);
+  $('servicesGrid').innerHTML = s.services.map(sv => `
+    <div class="card card-sm" style="display:flex;align-items:center;gap:12px;">
+      <div style="color:${sv.status==='running'?'var(--green)':'var(--red)'};">●</div>
+      <div>
+        <div style="font-size:12px;font-weight:600;">${sv.name}</div>
+        <div style="font-size:11px;color:var(--muted);">${sv.status}${sv.uptime_s ? ' · ' + Math.round(sv.uptime_s/60) + 'm uptime' : ''}</div>
+      </div>
+    </div>`).join('');
+  const mins = Math.round(s.uptime_s / 60);
+  $('sysInfo').innerHTML = `
+    <div><div style="font-size:11px;color:var(--muted);">Version</div><div style="font-family:var(--font-mono);">${s.app_version}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Environment</div><div>${s.environment}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Uptime</div><div style="font-family:var(--font-mono);">${mins}m</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Panels</div><div style="font-family:var(--font-mono);">${s.panel_count}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">Active Alerts</div><div style="font-family:var(--font-mono);color:${s.active_alerts>0?'var(--red)':'var(--green)'};">${s.active_alerts}</div></div>
+    <div><div style="font-size:11px;color:var(--muted);">DB Size</div><div style="font-family:var(--font-mono);">${s.db_size_mb} MB</div></div>
+  `;
+}
+
+// ── Page routing ──────────────────────────────────────────────────────────────
+const pageLoaders = {
+  overview: loadOverview, panels: loadPanels, forecast: loadForecast,
+  bfci: loadBFCI, cv: loadCV, alerts: loadAlerts, relay: loadRelay,
+  carbon: loadCarbon, workorders: loadWO, users: loadUsers, system: loadSystem,
+};
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = $(`page-${name}`);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(`'${name}'`)) n.classList.add('active');
+  });
+  if (pageLoaders[name]) pageLoaders[name]();
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+function initCharts() {
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.borderColor = '#1e3020';
+
+  const makeChart = (id, type, data, opts={}) => {
+    if (charts[id]) charts[id].destroy();
+    const ctx = $(id)?.getContext('2d');
+    if (!ctx) return;
+    charts[id] = new Chart(ctx, { type, data, options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111a14', borderColor: '#1e3020', borderWidth: 1 }},
+      scales: { x: { grid: { color: '#1e3020' }}, y: { grid: { color: '#1e3020' }}},
+      ...opts }});
+    return charts[id];
+  };
+
+  // Hourly chart — placeholder
+  makeChart('chartHourly', 'line', {
+    labels: Array.from({length:24},(_,i)=>`${i}:00`),
+    datasets: [{
+      label: 'kW', data: Array(24).fill(0),
+      borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.08)',
+      tension: 0.4, fill: true, pointRadius: 0,
+    }]
+  });
+
+  // Forecast hourly
+  makeChart('chartFcHourly', 'bar', {
+    labels: [], datasets: [
+      { label: 'Actual', data: [], backgroundColor: 'rgba(34,197,94,.6)' },
+      { label: 'Forecast', data: [], backgroundColor: 'rgba(59,130,246,.5)' },
+    ]
+  }, { plugins: { legend: { display: true, labels: { color: '#64748b' }}}});
+
+  // Forecast history
+  makeChart('chartFcHistory', 'line', {
+    labels: [], datasets: [
+      { label: 'Actual', data: [], borderColor: '#22c55e', tension: 0.3, pointRadius: 3 },
+      { label: 'Predicted', data: [], borderColor: '#3b82f6', tension: 0.3, pointRadius: 3, borderDash: [4,4] },
+    ]
+  }, { plugins: { legend: { display: true, labels: { color: '#64748b' }}}});
+
+  // Carbon monthly
+  makeChart('chartCarbon', 'bar', {
+    labels: [], datasets: [{
+      label: 'CO₂ Offset (kg)', data: [],
+      backgroundColor: ctx => {
+        const i = charts['chartCarbon']?.data.datasets[0].data;
+        return 'rgba(34,197,94,.7)';
+      },
+    }]
+  });
+}
+
+function updateHourlyChart(profile) {
+  const c = charts['chartHourly'];
+  if (!c) return;
+  c.data.labels   = profile.map(h => h.label);
+  c.data.datasets[0].data = profile.map(h => h.kw);
+  c.data.datasets[0].segment = {
+    borderColor: ctx => ctx.p1DataIndex > new Date().getHours() ? '#3b82f6' : '#22c55e',
+    backgroundColor: ctx => ctx.p1DataIndex > new Date().getHours() ? 'rgba(59,130,246,.06)' : 'rgba(34,197,94,.08)',
+  };
+  c.update('none');
+}
+
+function updateFcHourlyChart(profile) {
+  const c = charts['chartFcHourly'];
+  if (!c) return;
+  const now = new Date().getHours();
+  c.data.labels = profile.map(h => h.label);
+  c.data.datasets[0].data = profile.map(h => h.is_forecast ? null : h.kw);
+  c.data.datasets[1].data = profile.map(h => h.is_forecast ? h.kw : null);
+  c.update('none');
+}
+
+function updateFcHistoryChart(history) {
+  const c = charts['chartFcHistory'];
+  if (!c) return;
+  c.data.labels = history.map(h => h.date);
+  c.data.datasets[0].data = history.map(h => h.actual_kwh);
+  c.data.datasets[1].data = history.map(h => h.predicted_kwh);
+  c.update('none');
+}
+
+function updateCarbonChart(months) {
+  const c = charts['chartCarbon'];
+  if (!c) return;
+  c.data.labels = months.map(m => m.month);
+  c.data.datasets[0].data = months.map(m => m.co2_kg);
+  c.data.datasets[0].backgroundColor = months.map(m =>
+    m.is_projected ? 'rgba(59,130,246,.5)' : 'rgba(34,197,94,.7)');
+  c.update('none');
+}
+
+// ── Auto-boot ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && $('loginOverlay').style.display !== 'none') doLogin();
+});
+
+if (TOKEN) {
+  // Try to boot with existing token
+  fetch(`${API}/api/auth/me`, { headers: h() })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(u => {
+      USER_ROLE = u.role; USER_NAME = u.full_name || u.email;
+      localStorage.setItem('vv_role', USER_ROLE);
+      localStorage.setItem('vv_name', USER_NAME);
+      bootApp();
+    })
+    .catch(() => { TOKEN = ''; localStorage.removeItem('vv_token'); });
+}
+</script>
+</body>
+</html>

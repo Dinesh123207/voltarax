@@ -1,0 +1,92 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# VoltVision AI — Systemd Service Files for Raspberry Pi
+# Install all services with: sudo bash firmware/install_services.sh
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 1. API Server ─────────────────────────────────────────────────────────────
+# /etc/systemd/system/voltvision-api.service
+[Unit]
+Description=VoltVision AI FastAPI Server
+After=network.target mosquitto.service influxdb.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/voltvision
+ExecStart=/home/pi/voltvision/venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+Environment=PYTHONPATH=/home/pi/voltvision
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 2. AI Engine ──────────────────────────────────────────────────────────────
+# /etc/systemd/system/voltvision-ai.service
+[Unit]
+Description=VoltVision AI Inference Engine (LSTM + CV + BFCI)
+After=network.target mosquitto.service voltvision-api.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/voltvision
+ExecStart=/home/pi/voltvision/venv/bin/python3 services/ai_engine.py
+Restart=always
+RestartSec=10
+Environment=PYTHONPATH=/home/pi/voltvision
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 3. MQTT Bridge ───────────────────────────────────────────────────────────
+# /etc/systemd/system/voltvision-mqtt-bridge.service
+[Unit]
+Description=VoltVision MQTT to InfluxDB Bridge
+After=network.target mosquitto.service influxdb.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/voltvision
+ExecStart=/home/pi/voltvision/venv/bin/python3 services/mqtt_to_influx.py
+Restart=always
+RestartSec=5
+Environment=PYTHONPATH=/home/pi/voltvision
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 4. Spectral Reader ────────────────────────────────────────────────────────
+# /etc/systemd/system/voltvision-spectral.service
+[Unit]
+Description=VoltVision AS7265x Spectral Reader
+After=network.target mosquitto.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/voltvision
+ExecStart=/home/pi/voltvision/venv/bin/python3 firmware/spectral_reader.py
+Restart=always
+RestartSec=10
+Environment=PYTHONPATH=/home/pi/voltvision
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

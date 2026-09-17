@@ -1,0 +1,10 @@
+.env
+db/*.db
+db/.seeded
+ai_models/*.pkl
+ai_models/*.tflite
+__pycache__/
+*.pyc
+.pytest_cache/
+training/data/
+training/real_data/

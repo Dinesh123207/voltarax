@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: voltvision-ai
+    env: python
+    region: singapore
+    buildCommand: pip install fastapi "uvicorn[standard]" "python-jose[cryptography]" bcrypt "pydantic[email]" pydantic-settings python-multipart scikit-learn numpy pandas joblib email-validator && python scripts/seed_db.py
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: INFLUX_TOKEN
+        value: ""
+      - key: ADMIN_SEED_EMAIL
+        value: admin@voltarax.in
+      - key: ADMIN_SEED_PASSWORD
+        value: Admin@Voltarax2026
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: SQLITE_DB_PATH
+        value: ./db/voltvision.db
